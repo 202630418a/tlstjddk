@@ -1,0 +1,149 @@
+html_content = """<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘 들을 노래 추천</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: #1e293b;
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: #38bdf8;
+        }
+
+        .card {
+            background-color: #334155;
+            padding: 1.5rem;
+            border-radius: 16px;
+            margin-bottom: 1.5rem;
+        }
+
+        .album-art {
+            width: 100%;
+            height: 280px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        .song-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+        }
+
+        .artist {
+            font-size: 1rem;
+            color: #94a3b8;
+        }
+
+        .recommend-btn {
+            background-color: #38bdf8;
+            color: #0f172a;
+            border: none;
+            padding: 0.8rem 1.8rem;
+            font-size: 1rem;
+            font-weight: 700;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .recommend-btn:hover {
+            background-color: #7dd3fc;
+            transform: translateY(-2px);
+        }
+
+        .recommend-btn:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🎵 오늘 들을 노래</h1>
+        
+        <div class="card">
+            <img id="albumArt" class="album-art" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500" alt="앨범 커버">
+            <div id="songTitle" class="song-title">버튼을 눌러주세요</div>
+            <div id="artist" class="artist">오늘의 추천 곡이 등장합니다</div>
+        </div>
+
+        <button class="recommend-btn" onclick="getRandomSong()">노래 추천</button>
+    </div>
+
+    <script>
+        const songList = [
+            {
+                title: "Hype Boy",
+                artist: "NewJeans",
+                cover: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500"
+            },
+            {
+                title: "사건의 지평선",
+                artist: "윤하",
+                cover: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=500"
+            },
+            {
+                title: "Seven",
+                artist: "정국 (Jungkook)",
+                cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500"
+            },
+            {
+                title: "Love Lee",
+                artist: "AKMU (악뮤)",
+                cover: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500"
+            },
+            {
+                title: "포트레잇 (Portrait)",
+                artist: "DAY6",
+                cover: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=500"
+            }
+        ];
+
+        function getRandomSong() {
+            const randomIndex = Math.floor(Math.random() * songList.length);
+            const selectedSong = songList[randomIndex];
+
+            document.getElementById('songTitle').innerText = selectedSong.title;
+            document.getElementById('artist').innerText = selectedSong.artist;
+            document.getElementById('albumArt').src = selectedSong.cover;
+        }
+    </script>
+</body>
+</html>
+"""
+
+file_name = "song_recommendation.html"
+with open(file_name, "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+print(f"FILE_CREATED: {file_name}")
