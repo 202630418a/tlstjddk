@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘의 조퇴 가능 확률 계산기 🎒</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Gaegu, Nanum Gothic) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        pastel: {
+                            yellow: '#FFF9C4',
+                            yellowDark: '#FFF176',
+                            green: '#E8F5E9',
+                            greenDark: '#A5D6A7',
+                            blue: '#E1F5FE',
+                            blueDark: '#81D4FA',
+                            pink: '#FCE4EC',
+                            pinkDark: '#F48FB1',
+                            paper: '#FFFDF9',
+                            ink: '#374151'
+                        }
+                    },
+                    fontFamily: {
+                        hand: ['Gaegu', 'cursive'],
+                        sans: ['Nanum Gothic', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'paper': '0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04)',
+                        'note': '4px 4px 0px 0px rgba(0, 0, 0, 0.15)',
+                        'btn': '0px 4px 0px 0px #374151'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background-color: #f3f4f6;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 20px 20px;
+            font-family: 'Nanum Gothic', sans-serif;
+            color: #374151;
+        }
+
+        /* Spiral bindings visual */
+        .spiral-binding {
+            position: absolute;
+            top: 0;
+            left: 20px;
+            right: 20px;
+            height: 24px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 20;
+        }
+        .spiral-ring {
+            width: 14px;
+            height: 28px;
+            background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 50%, #4b5563 100%);
+            border-radius: 8px;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            transform: translateY(-12px);
+        }
+
+        /* Range Sliders */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 14px;
+            cursor: pointer;
+            background: #e5e7eb;
+            border-radius: 8px;
+            border: 2px solid #374151;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 28px;
+            width: 28px;
+            border-radius: 50%;
+            background: #FFF9C4;
+            border: 2.5px solid #374151;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: transform 0.15s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        /* Step Transitions */
+        .step-page {
+            display: none;
+            opacity: 0;
+            transform: translateX(30px);
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+        }
+
+        .step-page.active {
+            display: block;
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Stamp animation */
+        @keyframes stamp-bounce {
+            0% { transform: scale(3) rotate(-12deg); opacity: 0; }
+            50% { transform: scale(0.9) rotate(-12deg); opacity: 1; }
+            75% { transform: scale(1.05) rotate(-12deg); }
+            100% { transform: scale(1) rotate(-12deg); opacity: 1; }
+        }
+
+        .animate-stamp {
+            animation: stamp-bounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .handwritten {
+            font-family: 'Gaegu', cursive;
+        }
+    </style>
+</head>
+<body class="min-h-screen py-6 px-4 flex flex-col justify-between items-center">
+
+    <main class="w-full max-w-lg mx-auto">
+        
+        <!-- Header Ribbon / Title -->
+        <div class="text-center mb-4 relative">
+            <span class="inline-block bg-pastel-pinkDark text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-sm mb-2 border border-gray-800">
+                School Life Survival Tool
+            </span>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-800 tracking-tight flex items-center justify-center gap-2">
+                <span>🎒</span> 오늘의 조퇴 가능 확률 <span>🏫</span>
+            </h1>
+            <p class="text-gray-600 handwritten text-lg mt-0.5">"담임쌤 설득 확률 정밀 측정기 (스텝 테스트)"</p>
+        </div>
+
+        <div class="relative bg-pastel-paper rounded-2xl border-4 border-gray-800 shadow-paper p-5 sm:p-7 pt-9 min-h-[460px] flex flex-col justify-between overflow-hidden">
+            
+            <!-- Spiral Rings Top Deco -->
+            <div class="spiral-binding px-4">
+                <div class="spiral-ring"></div>
+                <div class="spiral-ring"></div>
+                <div class="spiral-ring"></div>
+                <div class="spiral-ring"></div>
+                <div class="spiral-ring"></div>
+                <div class="spiral-ring"></div>
+                <div class="spiral-ring"></div>
+            </div>
+
+            <!-- Sticky Tape Visual Accent -->
+            <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 w-28 h-7 bg-yellow-200/80 border border-yellow-300 rotate-1 z-10 pointer-events-none"></div>
+
+            <!-- Top Wizard Bar & Progress Indicator -->
+            <div id="progressContainer" class="mb-5">
+                <div class="flex justify-between items-center text-xs font-bold text-gray-600 mb-1.5">
+                    <span id="stepCounter" class="bg-gray-200 text-gray-800 px-2.5 py-0.5 rounded-full border border-gray-400">Step 1 / 5</span>
+                    <span id="progressPercent" class="text-gray-700 font-extrabold">20%</span>
+                </div>
+                <div class="w-full bg-gray-200 h-3 rounded-full border-2 border-gray-800 overflow-hidden p-0.5">
+                    <div id="progressBar" class="bg-amber-400 h-full rounded-full transition-all duration-300 w-[20%]"></div>
+                </div>
+            </div>
+
+            <!-- Wizard Pages Wrapper -->
+            <div id="wizardContent" class="flex-grow flex flex-col justify-center">
+
+                <!-- STEP 1: Desired Departure Period -->
+                <div class="step-page active" id="step1">
+                    <div class="bg-pastel-yellow/50 p-5 rounded-2xl border-2 border-gray-800 shadow-sm">
+                        <span class="bg-amber-300 text-gray-900 text-xs font-bold px-2.5 py-1 rounded-md border border-gray-800 mb-2 inline-block">Q1. 목표 시점</span>
+                        <h2 class="font-extrabold text-gray-900 text-lg sm:text-xl mb-4">
+                            오늘 몇 교시 끝나고 조퇴하고 싶나요?
+                        </h2>
+                        <div class="grid grid-cols-4 sm:grid-cols-7 gap-2 my-2" id="targetPeriodContainer">
+                            <!-- JS Generated -->
+                        </div>
+                        <input type="hidden" id="targetPeriod" value="4">
+                        <p class="text-xs text-gray-500 mt-3 text-center">※ 학교 수업 종료 시점에 맞춰 선택해주세요.</p>
+                    </div>
+                </div>
+
+                <!-- STEP 2: Performance Assessment -->
+                <div class="step-page" id="step2">
+                    <div class="bg-pastel-green/50 p-5 rounded-2xl border-2 border-gray-800 shadow-sm">
+                        <span class="bg-emerald-300 text-gray-900 text-xs font-bold px-2.5 py-1 rounded-md border border-gray-800 mb-2 inline-block">Q2. 수행평가 및 시험</span>
+                        <h2 class="font-extrabold text-gray-900 text-lg sm:text-xl mb-3">
+                            오늘 수행평가(또는 중요 시험)가 있나요?
+                        </h2>
+                        
+                        <div class="flex gap-3 my-3">
+                            <button type="button" onclick="setHasAssessment(false)" id="assessNoBtn"
+                                class="flex-1 py-3 px-4 rounded-xl border-2 border-gray-800 font-bold text-gray-900 bg-emerald-300 shadow-sm transition active:scale-95 flex items-center justify-center gap-2">
+                                ❌ 없음
+                            </button>
+                            <button type="button" onclick="setHasAssessment(true)" id="assessYesBtn"
+                                class="flex-1 py-3 px-4 rounded-xl border-2 border-gray-800 font-bold text-gray-800 bg-white opacity-60 shadow-sm transition active:scale-95 flex items-center justify-center gap-2">
+                                📝 있음
+                            </button>
+                        </div>
+
+                        <!-- Sub-question if YES -->
+                        <div id="assessmentPeriodBox" class="mt-4 pt-3 border-t-2 border-dashed border-gray-400 hidden">
+                            <p class="text-sm font-bold text-gray-800 mb-2">몇 교시에 수행평가가 있나요?</p>
+                            <div class="grid grid-cols-4 sm:grid-cols-7 gap-1.5" id="assessPeriodContainer">
+                                <!-- JS Generated -->
+                            </div>
+                            <input type="hidden" id="assessPeriod" value="5">
+                            <p id="assessmentWarning" class="text-xs text-rose-600 font-bold mt-2 hidden">
+                                ⚠️ 조퇴 예정 교시보다 이후에 시험이 있으면 감점이 큽니다!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 3: Parents' Mood -->
+                <div class="step-page" id="step3">
+                    <div class="bg-pastel-blue/50 p-5 rounded-2xl border-2 border-gray-800 shadow-sm">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="bg-sky-300 text-gray-900 text-xs font-bold px-2.5 py-1 rounded-md border border-gray-800 inline-block">Q3. 가정 환경</span>
+                            <span id="parentMoodVal" class="font-extrabold text-blue-700 handwritten text-2xl">5점</span>
+                        </div>
+                        <h2 class="font-extrabold text-gray-900 text-lg sm:text-xl mb-4">
+                            최근 일주일간 부모님 기분 지수
+                        </h2>
+                        
+                        <div class="my-4">
+                            <input type="range" id="parentMood" min="1" max="10" value="5" step="1" oninput="updateSliderLabels()">
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-700 font-bold px-1">
+                            <span>👿 1점 (폭풍전야)</span>
+                            <span id="parentMoodDesc" class="text-blue-800 font-extrabold">보통 수준</span>
+                            <span>😇 10점 (천사급)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 4: Student Diligence -->
+                <div class="step-page" id="step4">
+                    <div class="bg-pastel-pink/50 p-5 rounded-2xl border-2 border-gray-800 shadow-sm">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="bg-pink-300 text-gray-900 text-xs font-bold px-2.5 py-1 rounded-md border border-gray-800 inline-block">Q4. 학교 평판</span>
+                            <span id="diligenceVal" class="font-extrabold text-pink-700 handwritten text-2xl">5점</span>
+                        </div>
+                        <h2 class="font-extrabold text-gray-900 text-lg sm:text-xl mb-4">
+                            최근 일주일간 본인 성실도 지수
+                        </h2>
+                        
+                        <div class="my-4">
+                            <input type="range" id="diligence" min="1" max="10" value="5" step="1" oninput="updateSliderLabels()">
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-700 font-bold px-1">
+                            <span>😴 1점 (지각/불성실)</span>
+                            <span id="diligenceDesc" class="text-pink-800 font-extrabold">평범한 학생</span>
+                            <span>🧑‍🎓 10점 (모범생)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 5: Urgency -->
+                <div class="step-page" id="step5">
+                    <div class="bg-amber-100/70 p-5 rounded-2xl border-2 border-gray-800 shadow-sm">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="bg-amber-300 text-gray-900 text-xs font-bold px-2.5 py-1 rounded-md border border-gray-800 inline-block">Q5. 본인 상태</span>
+                            <span id="urgencyVal" class="font-extrabold text-amber-800 handwritten text-2xl">5점</span>
+                        </div>
+                        <h2 class="font-extrabold text-gray-900 text-lg sm:text-xl mb-4">
+                            오늘 조퇴 간절함 지수
+                        </h2>
+                        
+                        <div class="my-4">
+                            <input type="range" id="urgency" min="1" max="10" value="5" step="1" oninput="updateSliderLabels()">
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-700 font-bold px-1">
+                            <span>😐 1점 (되면 좋고~)</span>
+                            <span id="urgencyDesc" class="text-amber-900 font-extrabold">적당한 간절함</span>
+                            <span>🔥 10점 (당장 탈출)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-page" id="stepResult">
+                    
+                    <!-- Result Card -->
+                    <div id="trafficLightCard" class="p-5 rounded-2xl border-3 border-gray-800 text-center relative overflow-hidden shadow-md">
+                        
+                        <!-- Signal Lights -->
+                        <div class="flex justify-center gap-2.5 mb-2">
+                            <div id="redLight" class="w-6 h-6 rounded-full border-2 border-gray-800 bg-gray-300 transition duration-300"></div>
+                            <div id="yellowLight" class="w-6 h-6 rounded-full border-2 border-gray-800 bg-gray-300 transition duration-300"></div>
+                            <div id="greenLight" class="w-6 h-6 rounded-full border-2 border-gray-800 bg-gray-300 transition duration-300"></div>
+                        </div>
+
+                        <p class="text-[10px] font-bold tracking-widest text-gray-600 uppercase">PROBABILITY RESULT</p>
+                        <div class="flex justify-center items-baseline gap-1 my-1">
+                            <span id="scoreText" class="text-5xl sm:text-6xl font-extrabold text-gray-900 handwritten">0</span>
+                            <span class="text-2xl font-extrabold text-gray-800">%</span>
+                        </div>
+
+                        <div id="stampBadge" class="hidden absolute top-2 right-2 border-4 border-rose-600 text-rose-600 font-extrabold px-2.5 py-0.5 rounded-lg handwritten text-lg tracking-wider uppercase opacity-0 border-dashed">
+                            APPROVED
+                        </div>
+
+                        <h3 id="resultStatusTitle" class="text-lg font-bold text-gray-800"></h3>
+                        <p id="resultStatusDesc" class="text-xs font-medium text-gray-600 mt-0.5"></p>
+                    </div>
+
+                    <!-- Score Detail Sticky -->
+                    <div class="mt-4 bg-pastel-yellow/90 p-3.5 rounded-xl border-2 border-gray-800 shadow-sm text-xs">
+                        <h4 class="font-bold text-gray-800 mb-1 flex items-center gap-1.5">
+                            <i class="fa-solid fa-list-check text-amber-700"></i> 분석 리포트
+                        </h4>
+                        <ul id="scoreBreakdownList" class="space-y-1 text-gray-700 font-medium"></ul>
+                    </div>
+
+                    <!-- Recommended Excuse Box -->
+                    <div class="mt-4 bg-white p-4 rounded-xl border-2 border-gray-800 shadow-sm relative">
+                        <span class="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-300 absolute top-2.5 right-2.5">
+                            추천 템플릿
+                        </span>
+                        <h4 class="font-bold text-gray-800 text-sm mb-1.5 flex items-center gap-1.5">
+                            💡 담임쌤 설득 시나리오
+                        </h4>
+                        <div class="bg-gray-50 p-2.5 rounded-lg border border-gray-200">
+                            <p class="font-bold text-gray-800 text-xs sm:text-sm" id="excuseTitle"></p>
+                            <p class="bg-amber-100/70 p-1.5 rounded border border-amber-200 text-xs mt-1.5">
+                                💬 <strong>대사:</strong> <span id="excuseLine" class="font-handwritten text-sm text-gray-900"></span>
+                            </p>
+                            <p class="bg-blue-100/70 p-1.5 rounded border border-blue-200 text-xs mt-1">
+                                🎭 <strong>팁:</strong> <span id="excuseTip"></span>
+                            </p>
+                        </div>
+
+                        <!-- Copy Button -->
+                        <button type="button" onclick="copyExcuseToClipboard()" id="copyBtn"
+                            class="w-full mt-2.5 py-2 bg-pastel-blueDark hover:bg-sky-300 text-gray-900 rounded-lg border-2 border-gray-800 font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-sm">
+                            <i class="fa-regular fa-copy"></i> 대사 복사하기
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div id="navControls" class="flex justify-between items-center gap-3 mt-6 pt-3 border-t-2 border-dashed border-gray-300">
+                <button type="button" id="prevBtn" onclick="changeStep(-1)" 
+                    class="py-2.5 px-4 bg-gray-200 hover:bg-gray-300 text-gray-800 border-2 border-gray-800 rounded-xl font-bold text-sm transition flex items-center gap-1.5 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                    <i class="fa-solid fa-arrow-left"></i> 이전
+                </button>
+
+                <button type="button" id="nextBtn" onclick="changeStep(1)" 
+                    class="flex-1 py-2.5 px-4 bg-yellow-400 hover:bg-yellow-300 text-gray-900 border-2 border-gray-800 rounded-xl font-black text-sm sm:text-base shadow-btn transition flex items-center justify-center gap-2 cursor-pointer">
+                    다음 단계 <i class="fa-solid fa-arrow-right"></i>
+                </button>
+
+                <!-- Reset Button (Only visible on Result Step) -->
+                <button type="button" id="resetBtn" onclick="resetCalculator()" 
+                    class="hidden w-full py-3 bg-yellow-400 hover:bg-yellow-300 text-gray-900 border-2 border-gray-800 rounded-xl font-black text-base shadow-btn transition items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate-left"></i> 처음부터 다시 하기
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="text-center text-xs text-gray-500 mt-6 mb-2">
+        <p>※ 재미로 보는 조퇴 확률 계산기입니다. 실제 조퇴 시 규칙 및 보호자 동의를 준수하세요! 🏥</p>
+    </footer>
+
+    <script>
+        // State variables
+        let currentStep = 1;
+        const totalSteps = 5;
+        let hasAssessment = false;
+        let selectedTargetPeriod = 4;
+        let selectedAssessPeriod = 5;
+
+        // Excuses Templates
+        const excuseTemplates = [
+            {
+                title: "🤢 갑작스러운 원인 불명의 급체 및 복통",
+                line: "보건선생님, 3교시 끝날 때부터 속이 뒤틀리고 느껍고 구토감이 너무 심해요...",
+                tip: "복부를 살짝 감싸쥐고 이마에 손을 얹으며 사리지는 걸음걸이 연기 유지."
+            },
+            {
+                title: "🤯 지독한 편두통 및 심한 어지럼증",
+                line: "선생님, 아침부터 관자놀이가 깨질 듯이 쑤시고 칠판이 두 개로 겹쳐 보입니다.",
+                tip: "눈을 살짝 지그시 감거나 이마를 짚으며 안색이 어두운 표정 유지."
+            },
+            {
+                title: "🦷 안과/치과 사전 정기 검진 예약",
+                line: "선생님, 오늘 몇 달 전 어렵게 예약한 정기 검진이 있어 부모님이 데리러 오십니다.",
+                tip: "부모님께 담임선생님 확인 전화에 대비해 미리 사유 입맞춤 필수!"
+            },
+            {
+                title: "🏠 긴급 집안 경조사 및 동반 외출",
+                line: "선생님, 오늘 친친척 집안 급한 일로 부모님과 함께 외외곽에 다녀와야 합니다.",
+                tip: "신나 보이는 기색을 숨기고 정색된 조용한 태도로 가방 정리하기."
+            }
+        ];
+
+        window.onload = function() {
+            renderPeriodButtons('targetPeriodContainer', 'target', 4);
+            renderPeriodButtons('assessPeriodContainer', 'assess', 5);
+            updateSliderLabels();
+            updateStepUI();
+        };
+
+        function renderPeriodButtons(containerId, type, defaultValue) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            for (let i = 1; i <= 7; i++) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `period-btn-${type} py-2 text-xs sm:text-sm font-bold rounded-lg border-2 border-gray-800 transition ${
+                    i === defaultValue ? 'bg-yellow-300 text-gray-900 shadow-sm' : 'bg-white text-gray-700 hover:bg-gray-100'
+                }`;
+                btn.innerText = `${i}교시`;
+                btn.onclick = () => selectPeriod(type, i);
+                container.appendChild(btn);
+            }
+        }
+
+        function selectPeriod(type, value) {
+            if (type === 'target') {
+                selectedTargetPeriod = value;
+                document.getElementById('targetPeriod').value = value;
+                updateButtonStyles('period-btn-target', value);
+            } else {
+                selectedAssessPeriod = value;
+                document.getElementById('assessPeriod').value = value;
+                updateButtonStyles('period-btn-assess', value);
+            }
+            checkAssessmentWarning();
+        }
+
+        function updateButtonStyles(className, selectedValue) {
+            const buttons = document.getElementsByClassName(className);
+            Array.from(buttons).forEach((btn, idx) => {
+                const periodNum = idx + 1;
+                btn.className = `${className} py-2 text-xs sm:text-sm font-bold rounded-lg border-2 border-gray-800 ${
+                    periodNum === selectedValue ? 'bg-yellow-300 text-gray-900 shadow-sm' : 'bg-white text-gray-700 hover:bg-gray-100'
+                }`;
+            });
+        }
+
+        function setHasAssessment(status) {
+            hasAssessment = status;
+            const yesBtn = document.getElementById('assessYesBtn');
+            const noBtn = document.getElementById('assessNoBtn');
+            const box = document.getElementById('assessmentPeriodBox');
+
+            if (status) {
+                yesBtn.className = 'flex-1 py-3 px-4 rounded-xl border-2 border-gray-800 font-bold text-gray-900 bg-emerald-300 shadow-sm transition flex items-center justify-center gap-2';
+                noBtn.className = 'flex-1 py-3 px-4 rounded-xl border-2 border-gray-800 font-bold text-gray-800 bg-white opacity-60 shadow-sm transition flex items-center justify-center gap-2';
+                box.classList.remove('hidden');
+            } else {
+                noBtn.className = 'flex-1 py-3 px-4 rounded-xl border-2 border-gray-800 font-bold text-gray-900 bg-emerald-300 shadow-sm transition flex items-center justify-center gap-2';
+                yesBtn.className = 'flex-1 py-3 px-4 rounded-xl border-2 border-gray-800 font-bold text-gray-800 bg-white opacity-60 shadow-sm transition flex items-center justify-center gap-2';
+                box.classList.add('hidden');
+            }
+            checkAssessmentWarning();
+        }
+
+        function checkAssessmentWarning() {
+            const warning = document.getElementById('assessmentWarning');
+            if (hasAssessment && selectedAssessPeriod >= selectedTargetPeriod) {
+                warning.classList.remove('hidden');
+            } else {
+                warning.classList.add('hidden');
+            }
+        }
+
+        function updateSliderLabels() {
+            const mood = parseInt(document.getElementById('parentMood').value);
+            const diligence = parseInt(document.getElementById('diligence').value);
+            const urgency = parseInt(document.getElementById('urgency').value);
+
+            document.getElementById('parentMoodVal').innerText = mood + '점';
+            document.getElementById('diligenceVal').innerText = diligence + '점';
+            document.getElementById('urgencyVal').innerText = urgency + '점';
+
+            const moodDescs = ["매우 험악함", "냉기 기류", "기분 안좋음", "약간 저기압", "평범함", "기분 무난", "화기애애", "기분 좋음", "매우 관대함", "천사 그 자체"];
+            document.getElementById('parentMoodDesc').innerText = moodDescs[mood - 1];
+
+            const diliDescs = ["시한폭탄", "무단지각생", "지각대장", "관심대상", "보통 학생", "성실한 편", "모범적인 편", "선생님 신임", "우수 학생", "모범생 그 자체"];
+            document.getElementById('diligenceDesc').innerText = diliDescs[diligence - 1];
+
+            const urgDescs = ["되면 좋고", "소소한 기대", "살짝 피곤함", "집 가고 싶음", "꽤 간절함", "조퇴 열망", "간절함 폭발", "한계 도달", "탈출 시급", "지금 당장 런!"];
+            document.getElementById('urgencyDesc').innerText = urgDescs[urgency - 1];
+        }
+
+        // Navigation Control
+        function changeStep(delta) {
+            const nextStep = currentStep + delta;
+
+            if (nextStep >= 1 && nextStep <= totalSteps) {
+                currentStep = nextStep;
+                updateStepUI();
+            } else if (nextStep > totalSteps) {
+                // Finish wizard and calculate
+                calculateAndShowResult();
+            }
+        }
+
+        function updateStepUI() {
+            // Hide all pages
+            document.querySelectorAll('.step-page').forEach(page => {
+                page.classList.remove('active');
+            });
+
+            // Show current step page
+            const activePage = document.getElementById(`step${currentStep}`);
+            if (activePage) activePage.classList.add('active');
+
+            // Update Progress Bar
+            const percent = Math.round((currentStep / totalSteps) * 100);
+            document.getElementById('stepCounter').innerText = `Step ${currentStep} / ${totalSteps}`;
+            document.getElementById('progressPercent').innerText = `${percent}%`;
+            document.getElementById('progressBar').style.width = `${percent}%`;
+
+            // Update Nav Buttons
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const resetBtn = document.getElementById('resetBtn');
+
+            prevBtn.disabled = (currentStep === 1);
+
+            if (currentStep === totalSteps) {
+                nextBtn.innerHTML = `결과 분석하기 <i class="fa-solid fa-calculator"></i>`;
+                nextBtn.className = "flex-1 py-2.5 px-4 bg-emerald-400 hover:bg-emerald-300 text-gray-900 border-2 border-gray-800 rounded-xl font-black text-sm sm:text-base shadow-btn transition flex items-center justify-center gap-2 cursor-pointer";
+            } else {
+                nextBtn.innerHTML = `다음 단계 <i class="fa-solid fa-arrow-right"></i>`;
+                nextBtn.className = "flex-1 py-2.5 px-4 bg-yellow-400 hover:bg-yellow-300 text-gray-900 border-2 border-gray-800 rounded-xl font-black text-sm sm:text-base shadow-btn transition flex items-center justify-center gap-2 cursor-pointer";
+            }
+
+            prevBtn.classList.remove('hidden');
+            nextBtn.classList.remove('hidden');
+            resetBtn.classList.add('hidden');
+        }
+
+        // Calculate and Switch to Result Page
+        function calculateAndShowResult() {
+            const parentMood = parseInt(document.getElementById('parentMood').value);
+            const diligence = parseInt(document.getElementById('diligence').value);
+            const urgency = parseInt(document.getElementById('urgency').value);
+
+            let baseScore = (parentMood * 3.5) + (diligence * 4.0) + (urgency * 1.0);
+            let assessmentModifier = 0;
+            let assessmentDetailText = "";
+
+            if (!hasAssessment) {
+                assessmentModifier = 15;
+                assessmentDetailText = "수행평가 없음 (+15점 가산)";
+            } else {
+                if (selectedAssessPeriod < selectedTargetPeriod) {
+                    assessmentModifier = 10;
+                    assessmentDetailText = `수행평가(${selectedAssessPeriod}교시) 완료 후 조퇴 (+10점)`;
+                } else {
+                    assessmentModifier = -30;
+                    assessmentDetailText = `수행평가(${selectedAssessPeriod}교시) 회피 의혹 (-30점 감점)`;
+                }
+            }
+
+            let finalScore = Math.round(baseScore + assessmentModifier);
+            if (finalScore > 100) finalScore = 100;
+            if (finalScore < 0) finalScore = 0;
+
+            // Hide step controls, show result step
+            document.querySelectorAll('.step-page').forEach(page => page.classList.remove('active'));
+            document.getElementById('stepResult').classList.add('active');
+
+            // Header progress update to 100%
+            document.getElementById('stepCounter').innerText = `최종 결과`;
+            document.getElementById('progressPercent').innerText = `100%`;
+            document.getElementById('progressBar').style.width = `100%`;
+
+            // Adjust button UI
+            document.getElementById('prevBtn').classList.add('hidden');
+            document.getElementById('nextBtn').classList.add('hidden');
+            document.getElementById('resetBtn').classList.remove('hidden');
+            document.getElementById('resetBtn').classList.add('flex');
+
+            // Render details
+            animateScoreCount(finalScore);
+            renderResultUI(finalScore, parentMood, diligence, urgency, assessmentDetailText);
+            renderExcuseTemplate();
+        }
+
+        function animateScoreCount(targetScore) {
+            const scoreText = document.getElementById('scoreText');
+            let current = 0;
+            const duration = 700;
+            const stepTime = 15;
+            const steps = duration / stepTime;
+            const increment = targetScore / steps;
+
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= targetScore) {
+                    current = targetScore;
+                    clearInterval(timer);
+                }
+                scoreText.innerText = Math.floor(current);
+            }, stepTime);
+        }
+
+        function renderResultUI(score, mood, diligence, urgency, assessText) {
+            const trafficCard = document.getElementById('trafficLightCard');
+            const red = document.getElementById('redLight');
+            const yellow = document.getElementById('yellowLight');
+            const green = document.getElementById('greenLight');
+            const title = document.getElementById('resultStatusTitle');
+            const desc = document.getElementById('resultStatusDesc');
+            const stamp = document.getElementById('stampBadge');
+
+            red.className = "w-6 h-6 rounded-full border-2 border-gray-800 bg-gray-300";
+            yellow.className = "w-6 h-6 rounded-full border-2 border-gray-800 bg-gray-300";
+            green.className = "w-6 h-6 rounded-full border-2 border-gray-800 bg-gray-300";
+            stamp.classList.add('hidden');
+            stamp.classList.remove('animate-stamp');
+
+            if (score >= 80) {
+                trafficCard.className = "p-5 rounded-2xl border-3 border-gray-800 text-center relative overflow-hidden shadow-md bg-emerald-100/90";
+                green.className = "w-6 h-6 rounded-full border-2 border-gray-800 bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]";
+                title.innerText = "🟢 성공 확률 매우 높음!";
+                desc.innerText = "지금 당장 가방을 싸고 자연스러운 표정으로 보건실로 향하세요. 🎒✨";
+                
+                stamp.classList.remove('hidden');
+                stamp.classList.add('animate-stamp');
+                stamp.innerText = "PASS OK";
+                stamp.className = "absolute top-2.5 right-2.5 border-4 border-emerald-600 text-emerald-700 font-extrabold px-2.5 py-0.5 rounded-lg handwritten text-lg tracking-wider uppercase border-dashed rotate-[-12deg]";
+
+            } else if (score >= 50) {
+                trafficCard.className = "p-5 rounded-2xl border-3 border-gray-800 text-center relative overflow-hidden shadow-md bg-amber-100/90";
+                yellow.className = "w-6 h-6 rounded-full border-2 border-gray-800 bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.8)]";
+                title.innerText = "🟡 연기력과 밀당이 필요한 상태";
+                desc.innerText = "진정성 있는 표정 연기와 학부모 확인 전화가 결정적입니다. 🎭🤝";
+
+            } else {
+                trafficCard.className = "p-5 rounded-2xl border-3 border-gray-800 text-center relative overflow-hidden shadow-md bg-rose-100/90";
+                red.className = "w-6 h-6 rounded-full border-2 border-gray-800 bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.8)]";
+                title.innerText = "🔴 조퇴 위험/불가 상태";
+                desc.innerText = "위험합니다. 무리한 시도는 의혹만 키웁니다. 교실에서 열공하세요. 🪦📚";
+            }
+
+            const list = document.getElementById('scoreBreakdownList');
+            list.innerHTML = `
+                <li class="flex justify-between items-center border-b border-yellow-200/80 pb-0.5">
+                    <span>• 부모님 기분 (${mood}점):</span>
+                    <span class="font-bold text-gray-900">+${(mood * 3.5).toFixed(1)}점</span>
+                </li>
+                <li class="flex justify-between items-center border-b border-yellow-200/80 pb-0.5">
+                    <span>• 본인 성실도 (${diligence}점):</span>
+                    <span class="font-bold text-gray-900">+${(diligence * 4.0).toFixed(1)}점</span>
+                </li>
+                <li class="flex justify-between items-center border-b border-yellow-200/80 pb-0.5">
+                    <span>• 조퇴 간절함 (${urgency}점):</span>
+                    <span class="font-bold text-gray-900">+${(urgency * 1.0).toFixed(1)}점</span>
+                </li>
+                <li class="flex justify-between items-center text-amber-900 pt-0.5">
+                    <span>• 수행평가 조건:</span>
+                    <span class="font-bold">${assessText}</span>
+                </li>
+            `;
+        }
+
+        function renderExcuseTemplate() {
+            const randomIdx = Math.floor(Math.random() * excuseTemplates.length);
+            const template = excuseTemplates[randomIdx];
+
+            document.getElementById('excuseTitle').innerText = template.title;
+            document.getElementById('excuseLine').innerText = `"${template.line}"`;
+            document.getElementById('excuseTip').innerText = template.tip;
+        }
+
+        function copyExcuseToClipboard() {
+            const excuseLineText = document.getElementById('excuseLine').innerText;
+            
+            const tempInput = document.createElement('textarea');
+            tempInput.value = excuseLineText.replace(/^"|"$/g, '');
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            const copyBtn = document.getElementById('copyBtn');
+            const originalHTML = copyBtn.innerHTML;
+            
+            copyBtn.innerHTML = `<i class="fa-solid fa-check text-emerald-700"></i> 복사 완료!`;
+            copyBtn.classList.replace('bg-pastel-blueDark', 'bg-emerald-300');
+
+            setTimeout(() => {
+                copyBtn.innerHTML = originalHTML;
+                copyBtn.classList.replace('bg-emerald-300', 'bg-pastel-blueDark');
+            }, 2000);
+        }
+
+        function resetCalculator() {
+            currentStep = 1;
+            document.getElementById('parentMood').value = 5;
+            document.getElementById('diligence').value = 5;
+            document.getElementById('urgency').value = 5;
+            
+            setHasAssessment(false);
+            selectPeriod('target', 4);
+            selectPeriod('assess', 5);
+            updateSliderLabels();
+
+            updateStepUI();
+        }
+    </script>
+</body>
+</html>
